@@ -797,11 +797,9 @@ retry:
     MA_HASH_CTX myctx;
     ctx= &myctx;
 #endif
-    unsigned char *s= (unsigned char*)mysql->info + 1, buf[1024],
-                  digest[MA_SHA256_HASH_SIZE];
-    char fp[128];
+    unsigned char buf[1024], digest[MA_SHA256_HASH_SIZE];
+    char fp[128], hexdigest[sizeof(digest)*2+1], *hexsig= mysql->info + 1;
     size_t buflen= sizeof(buf) - 1, fplen;
-    unsigned i;
 
     mysql->info= NULL; /* no need to confuse the client with binary info */
 
@@ -822,13 +820,8 @@ retry:
     ma_hash_result(ctx, digest);
     ma_hash_free(ctx);
 
-    for (i= 0; i < sizeof(digest) && s[0] && s[1]; i++, s+=2)
-    {
-      /* not a conventional hexadecimal but something easier to decode */
-      if ((s[0] - 'a') * 16 + s[1] - 'a' != digest[i])
-        break;
-    }
-    if (i == sizeof(digest) && s[0] == 0)
+    mysql_hex_string(hexdigest, (char*)digest, sizeof(digest));
+    if (strcmp(hexdigest, hexsig) == 0)
       return 0; /* phew. self-signed certificate is validated! */
   }
 
