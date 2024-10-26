@@ -407,8 +407,7 @@ static int send_client_reply_packet(MCPVIO_EXT *mpvio,
   */
   if (mysql->client_flag & CLIENT_ZSTD_COMPRESSION)
   {
-    int4store(end, (unsigned int)3);
-    end+= 4;
+    *end++= 3;
   }
 
   /* Write authentication package */
