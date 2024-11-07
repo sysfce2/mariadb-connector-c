@@ -711,6 +711,7 @@ struct st_default_options mariadb_defaults[] =
   {{MYSQL_OPT_SSL_ENFORCE}, MARIADB_OPTION_BOOL, "tls-enforce"},
   {{MYSQL_OPT_SSL_VERIFY_SERVER_CERT}, MARIADB_OPTION_BOOL,"tls-verify-peer"},
   {{MARIADB_OPT_RESTRICTED_AUTH}, MARIADB_OPTION_STR, "restricted-auth"},
+  {{MYSQL_OPT_ZSTD_COMPRESSION_LEVEL}, MARIADB_OPTION_INT, "zstd-compression-level"},
   {{0}, 0, NULL}
 };
 
@@ -3835,6 +3836,9 @@ mysql_optionsv(MYSQL *mysql,enum mysql_option option, ...)
         OPT_SET_EXTENDED_VALUE(&mysql->options, status_data, mysql);
       }
     }
+    break;
+  case MYSQL_OPT_ZSTD_COMPRESSION_LEVEL:
+    OPT_SET_EXTENDED_VALUE_INT(&mysql->options, zstd_compression_level, *((unsigned int *)arg1));
     break;
   default:
     va_end(ap);
