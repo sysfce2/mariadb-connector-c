@@ -5741,7 +5741,74 @@ end:
   return ret;
 }
 
+static int test_conc702(MYSQL *ma)
+{
+  MYSQL_STMT *stmt, *stmt2;
+
+  diag("Server info %s\nClient info: %s",
+      mysql_get_server_info(ma), mysql_get_client_info());
+
+  mysql_query(ma, "DROP PROCEDURE IF EXISTS p1");
+
+  mysql_query(ma, "CREATE PROCEDURE p1() BEGIN"
+                  "  SELECT 1 FROM DUAL; "
+                  "END");
+
+  stmt= mysql_stmt_init(ma);
+
+  FAIL_IF(!stmt, "Could not allocate stmt");
+
+  mysql_stmt_prepare(stmt, "CALL p1()", -1);
+  mysql_stmt_execute(stmt);
+
+ 
+  mysql_stmt_store_result(stmt);
+
+  // We've done everything w/ result and skip everything else
+
+  while (mysql_stmt_more_results(stmt)) {
+
+    mysql_stmt_next_result(stmt);
+    // state at this moment is MYSQL_STMT_WAITING_USE_OR_STORE. But there is no result,
+    // we can't store it. And there is no way to change it
+
+  }
+  // Now we are not closing it, for later use. For example it's been put to the cache
+  // Using connection freely - we haven't done anything wrong, "nothing is out of sync"
+
+  mysql_query(ma, "DROP PROCEDURE p1");
+  mysql_query(ma, "DROP PROCEDURE IF EXISTS p2");
+  mysql_query(ma, "CREATE PROCEDURE p2() "
+                  "BEGIN "
+                  "  SELECT 'Marten' FROM DUAL; "
+                  "  SELECT 'Zack' FROM DUAL; "
+                  "END");
+
+  stmt2= mysql_stmt_init(ma);
+
+  mysql_stmt_prepare(stmt2, "CALL p2()", -1);
+
+  mysql_stmt_execute(stmt2);
+
+  mysql_stmt_store_result(stmt2);
+
+  // I was initially wrong, this goes thru
+  check_stmt_rc(mysql_stmt_next_result(stmt2), stmt2);
+
+  // But we get error"Out of sync" set, if check
+  //  check_stmt_rc(mysql_stmt_next_result(stmt2), stmt2);
+
+  check_stmt_rc(mysql_stmt_store_result(stmt2), stmt2);
+
+  mysql_stmt_close(stmt2);
+
+  mysql_stmt_close(stmt);
+
+  return OK;
+}
+
 struct my_tests_st my_tests[] = {
+  {"test_conc702", test_conc702, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
   {"test_conc633", test_conc633, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
   {"test_conc623", test_conc623, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
   {"test_conc627", test_conc627, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
