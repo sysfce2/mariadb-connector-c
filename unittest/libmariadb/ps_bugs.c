@@ -5803,12 +5803,60 @@ static int test_conc702(MYSQL *ma)
   mysql_stmt_close(stmt2);
 
   mysql_stmt_close(stmt);
+  return OK;
+}
 
+static int test_conc739(MYSQL *mysql)
+{
+  MYSQL_STMT *stmt;
+  int rc;
+  MYSQL_BIND bind[2];
+  char buffer[2][100];
+  MYSQL_ROW row;
+  MYSQL_RES *result;
+  uint8 i;
+
+  rc= mysql_query(mysql, "SELECT FROM_UNIXTIME('1922.1'), FROM_UNIXTIME('1922.0')");
+  check_mysql_rc(rc, mysql);
+  result= mysql_store_result(mysql);
+  row= mysql_fetch_row(result);
+
+  stmt= mysql_stmt_init(mysql);
+
+  rc= mysql_stmt_prepare(stmt, SL("SELECT FROM_UNIXTIME('1922.1'), FROM_UNIXTIME('1922.0')"));
+  check_stmt_rc(rc, stmt);
+
+  memset(bind, 0, 2 * sizeof(MYSQL_BIND));
+  for (i=0; i < 2; i++)
+  {
+    bind[i].buffer_type= MYSQL_TYPE_STRING;
+    bind[i].buffer= &buffer[i];
+    bind[i].buffer_length= 100;
+  }
+
+  rc= mysql_stmt_execute(stmt);
+  check_stmt_rc(rc, stmt);
+
+  rc= mysql_stmt_bind_result(stmt, bind);
+  check_stmt_rc(rc, stmt);
+
+  rc= mysql_stmt_fetch(stmt);
+  check_stmt_rc(rc, stmt);
+
+  for (i=0; i < 2; i++)
+  {
+    diag("text: %s  binary: %s", row[i], buffer[i]);
+    FAIL_IF(strcmp(buffer[i], row[i]), "Different results (text/binary protocol)");
+  }
+
+  mysql_stmt_close(stmt);
+  mysql_free_result(result);
   return OK;
 }
 
 struct my_tests_st my_tests[] = {
   {"test_conc702", test_conc702, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
+  {"test_conc739", test_conc739, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
   {"test_conc633", test_conc633, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
   {"test_conc623", test_conc623, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
   {"test_conc627", test_conc627, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
