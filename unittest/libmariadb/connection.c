@@ -1966,7 +1966,42 @@ static int test_conc632(MYSQL *my __attribute__((unused)))
   return OK;
 }
 
+#if defined(HAVE_GNUTLS) || defined(HAVE_OPENSSL)
+static int test_conc748(MYSQL *my __attribute__((unused)))
+{
+  MYSQL *mysql;
+  int i;
+  const char *ciphers[3]= {"TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384", "TLS_CHACHA20_POLY1305_SHA256"};
+
+  for (i=0; i < 3; i++)
+  {
+    const char *tls_version;
+    mysql= mysql_init(NULL);
+
+    mysql_ssl_set(mysql, NULL, NULL, NULL, NULL, NULL);
+    mysql_optionsv(mysql, MYSQL_OPT_SSL_CIPHER, ciphers[i]);
+
+    if (!my_test_connect(mysql, hostname, NULL,
+                               NULL, schema, port, socketname, 0))
+    {
+      diag("error: %s", mysql_error(mysql));
+      return FAIL;
+    }
+
+    FAIL_IF(strcmp(ciphers[i], mysql_get_ssl_cipher(mysql)), "Cipher mismatch");
+    mariadb_get_infov(mysql, MARIADB_CONNECTION_TLS_VERSION, &tls_version);
+    FAIL_IF(strcmp(tls_version, "TLSv1.3"), "TLS version mismatch");
+
+    mysql_close(mysql);
+  }
+  return OK;
+}
+#endif
+
 struct my_tests_st my_tests[] = {
+#if defined(HAVE_GNUTLS) || defined(HAVE_OPENSSL)
+  {"test_conc748", test_conc748, TEST_CONNECTION_NONE, 0, NULL, NULL},
+#endif
   {"test_conc632", test_conc632, TEST_CONNECTION_NONE, 0, NULL, NULL},
   {"test_conc490", test_conc490, TEST_CONNECTION_NONE, 0, NULL, NULL},
   {"test_gtid", test_gtid, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
