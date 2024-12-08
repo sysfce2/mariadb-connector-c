@@ -5854,8 +5854,56 @@ static int test_conc739(MYSQL *mysql)
   return OK;
 }
 
+static int test_conc176(MYSQL *mysql)
+{
+  MYSQL_STMT *stmt;
+  MYSQL_BIND bind;
+  char buffer[9];
+
+  int rc;
+
+  rc= mysql_query(mysql, "DROP TABLE IF EXISTS t1");
+  check_mysql_rc(rc, mysql);
+
+  rc= mysql_query(mysql, "CREATE TABLE t1 (a int(8) zerofill)");
+  check_mysql_rc(rc, mysql);
+
+  rc= mysql_query(mysql, "INSERT INTO t1 VALUES (1)");
+  check_mysql_rc(rc, mysql);
+
+  stmt= mysql_stmt_init(mysql);
+
+  rc= mysql_stmt_prepare(stmt, "SELECT a FROM t1", -1);
+  check_stmt_rc(rc, stmt);
+
+  rc= mysql_stmt_execute(stmt);
+
+  memset(&bind, 0, sizeof(MYSQL_BIND));
+
+  bind.buffer= buffer;
+  bind.buffer_type= MYSQL_TYPE_STRING;
+  bind.buffer_length= 9;
+
+  rc= mysql_stmt_bind_result(stmt, &bind);
+  check_stmt_rc(rc, stmt);
+
+  rc= mysql_stmt_fetch(stmt);
+
+  diag("Buffer: %s", buffer);
+  FAIL_IF(strlen(buffer) == 1, "Expected zerofilled string");
+
+  rc= mysql_stmt_close(stmt);
+
+  rc= mysql_query(mysql, "DROP TABLE t1");
+  check_mysql_rc(rc, mysql);
+
+  return OK;
+}
+
+
 struct my_tests_st my_tests[] = {
   {"test_conc702", test_conc702, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
+  {"test_conc176", test_conc176, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
   {"test_conc739", test_conc739, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
   {"test_conc633", test_conc633, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
   {"test_conc623", test_conc623, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},

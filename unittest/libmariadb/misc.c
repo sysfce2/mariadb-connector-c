@@ -1534,6 +1534,41 @@ static int test_conc458(MYSQL *my __attribute__((unused)))
   return OK;
 }
 
+static int test_conc163(MYSQL *mysql)
+{
+  int rc;
+  MYSQL_STMT *stmt;
+
+  rc= mysql_query(mysql, "SET @a:=1");
+  check_mysql_rc(rc, mysql);
+
+  FAIL_IF(mysql_info(mysql) != NULL, "mysql_info: expected NULL");
+
+  rc= mysql_query(mysql, "CREATE OR REPLACE TABLE t1 AS SELECT 1");
+  check_mysql_rc(rc, mysql);
+
+  FAIL_IF(mysql_info(mysql) == NULL, "mysql_info: expected != NULL");
+
+  rc= mysql_query(mysql, "DROP TABLE t1");
+  check_mysql_rc(rc, mysql);
+
+  stmt= mysql_stmt_init(mysql);
+  rc= mariadb_stmt_execute_direct(stmt, SL("SET @a:=1"));
+  check_stmt_rc(rc, stmt);
+  FAIL_IF(mysql_info(mysql) != NULL, "mysql_info: expected NULL");
+
+  rc= mariadb_stmt_execute_direct(stmt, SL("CREATE OR REPLACE TABLE t1 AS SELECT 1"));
+  check_stmt_rc(rc, stmt);
+  FAIL_IF(mysql_info(mysql) == NULL, "mysql_info: expected != NULL");
+
+  mysql_stmt_close(stmt);
+
+  rc= mysql_query(mysql, "DROP TABLE t1");
+  check_mysql_rc(rc, mysql);
+
+  return OK;
+}
+
 
 static int test_conc533(MYSQL *mysql)
 {
@@ -1631,6 +1666,7 @@ static int test_ext_field_attr(MYSQL *mysql)
 struct my_tests_st my_tests[] = {
   {"test_ext_field_attr", test_ext_field_attr, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
   {"test_conc533", test_conc533, TEST_CONNECTION_NEW, 0, NULL, NULL},
+  {"test_conc163", test_conc163, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
   {"test_conc458", test_conc458, TEST_CONNECTION_NONE, 0, NULL, NULL},
 #if !__has_feature(memory_sanitizer)
   {"test_conc457", test_conc457, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
