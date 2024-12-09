@@ -6,7 +6,7 @@
 #include <mysql/client_plugin.h>
 
 typedef struct st_mysql_client_plugin_AUTHENTICATION auth_plugin_t;
-static int client_mpvio_write_packet(struct st_plugin_vio*, const uchar*, size_t);
+static int client_mpvio_write_packet(struct st_plugin_vio*, const uchar*, int);
 static int native_password_auth_client(MYSQL_PLUGIN_VIO *vio, MYSQL *mysql);
 static int dummy_fallback_auth_client(MYSQL_PLUGIN_VIO *vio, MYSQL *mysql __attribute__((unused)));
 extern void read_user_name(char *name);
@@ -16,7 +16,7 @@ extern unsigned char *mysql_net_store_length(unsigned char *packet, ulonglong le
 
 typedef struct {
   int (*read_packet)(struct st_plugin_vio *vio, uchar **buf);
-  int (*write_packet)(struct st_plugin_vio *vio, const uchar *pkt, size_t pkt_len);
+  int (*write_packet)(struct st_plugin_vio *vio, const uchar *pkt, int pkt_len);
   void (*info)(struct st_plugin_vio *vio, struct st_plugin_vio_info *info);
   /* -= end of MYSQL_PLUGIN_VIO =- */
   MYSQL *mysql;
@@ -499,7 +499,7 @@ static int client_mpvio_read_packet(struct st_plugin_vio *mpv, uchar **buf)
 */
 
 static int client_mpvio_write_packet(struct st_plugin_vio *mpv,
-                                     const uchar *pkt, size_t pkt_len)
+                                     const uchar *pkt, int pkt_len)
 {
   int res;
   MCPVIO_EXT *mpvio= (MCPVIO_EXT*)mpv;
@@ -507,9 +507,9 @@ static int client_mpvio_write_packet(struct st_plugin_vio *mpv,
   if (mpvio->packets_written == 0)
   {
     if (mpvio->mysql_change_user)
-      res= send_change_user_packet(mpvio, pkt, (int)pkt_len);
+      res= send_change_user_packet(mpvio, pkt, pkt_len);
     else
-      res= send_client_reply_packet(mpvio, pkt, (int)pkt_len);
+      res= send_client_reply_packet(mpvio, pkt, pkt_len);
   }
   else
   {

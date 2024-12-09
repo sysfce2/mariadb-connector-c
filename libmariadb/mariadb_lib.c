@@ -4048,7 +4048,7 @@ mysql_get_optionv(MYSQL *mysql, enum mysql_option option, void *arg, ...)
                       (uint)strlen((char *)key))))
       {
         p+= strlen(key) + 1;
-        *((void **)data)= *((void **)p);
+        memcpy(data, p, sizeof(void *));
         break;
       }
       if (data)
