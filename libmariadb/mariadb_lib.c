@@ -2166,14 +2166,29 @@ mysql_send_query(MYSQL* mysql, const char* query, unsigned long length)
   return ma_simple_command(mysql, COM_QUERY, query, length, 1,0);
 }
 
+/* Helper function to detect possible buffer over- or underflow */
+inline my_bool ma_check_buffer_boundaries(MYSQL *mysql, uchar *current_pos,
+                                  ulong packet_size, size_t required)
+{
+  if ( (packet_size < (ulong)(current_pos - mysql->net.read_pos)) ||
+       ((size_t)(packet_size - (current_pos - mysql->net.read_pos)) < required))
+    return 1;
+  return 0;
+}
+
 int ma_read_ok_packet(MYSQL *mysql, uchar *pos, ulong length)
 {
   uchar *end= mysql->net.read_pos+length;
   size_t item_len;
   mysql->affected_rows= net_field_length_ll(&pos);
   mysql->insert_id=	  net_field_length_ll(&pos);
+
+  if (ma_check_buffer_boundaries(mysql, pos, length, 2))
+    goto corrupted;
   mysql->server_status=uint2korr(pos);
   pos+=2;
+  if (ma_check_buffer_boundaries(mysql, pos, length, 2))
+    goto corrupted;
   mysql->warning_count=uint2korr(pos);
   pos+=2;
   if (pos > end)
@@ -2182,7 +2197,7 @@ int ma_read_ok_packet(MYSQL *mysql, uchar *pos, ulong length)
   {
     if ((item_len= net_field_length(&pos)))
       mysql->info=(char*) pos;
-    if (pos + item_len > end)
+    if (ma_check_buffer_boundaries(mysql, pos, length, item_len))
       goto corrupted;
 
     /* check if server supports session tracking */
@@ -2202,7 +2217,7 @@ int ma_read_ok_packet(MYSQL *mysql, uchar *pos, ulong length)
           uchar *old_pos= pos;
 
           item_len= net_field_length(&pos);  /* length for all items */
-          if (pos + item_len > end)
+          if (ma_check_buffer_boundaries(mysql, pos, length, item_len))
             goto corrupted;
           end= pos + item_len;
 
@@ -2233,7 +2248,7 @@ int ma_read_ok_packet(MYSQL *mysql, uchar *pos, ulong length)
                 net_field_length(&pos);
               }
               plen= net_field_length(&pos);
-              if (pos + plen > end)
+              if (ma_check_buffer_boundaries(mysql, pos, length, plen))
                 goto corrupted;
               if (!(session_item= ma_multi_malloc(0,
                                   &session_item, sizeof(LIST),
@@ -2263,7 +2278,7 @@ int ma_read_ok_packet(MYSQL *mysql, uchar *pos, ulong length)
                 if (!strncmp(str->str, "character_set_client", str->length))
                   set_charset= 1;
                 plen= net_field_length(&pos);
-                if (pos + plen > end)
+                if (ma_check_buffer_boundaries(mysql, pos, length, plen))
                   goto corrupted;
                 if (!(session_item= ma_multi_malloc(0,
                                     &session_item, sizeof(LIST),
@@ -2292,7 +2307,7 @@ int ma_read_ok_packet(MYSQL *mysql, uchar *pos, ulong length)
             default:
               /* not supported yet */
               plen= net_field_length(&pos);
-              if (pos + plen > end)
+              if (ma_check_buffer_boundaries(mysql, pos, length, plen))
                 goto corrupted;
               pos+= plen;
               break;
