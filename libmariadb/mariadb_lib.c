@@ -3844,7 +3844,7 @@ mysql_optionsv(MYSQL *mysql,enum mysql_option option, ...)
     }
     break;
   case MYSQL_OPT_ZSTD_COMPRESSION_LEVEL:
-    OPT_SET_EXTENDED_VALUE_INT(&mysql->options, zstd_compression_level, *((unsigned int *)arg1));
+    OPT_SET_EXTENDED_VALUE(&mysql->options, zstd_compression_level, *((unsigned char *)arg1));
     break;
   default:
     va_end(ap);
@@ -3871,6 +3871,9 @@ mysql_get_optionv(MYSQL *mysql, enum mysql_option option, void *arg, ...)
     break;
   case MYSQL_OPT_COMPRESS:
     *((my_bool *)arg)= mysql->options.compress;
+    break;
+  case MYSQL_OPT_ZSTD_COMPRESSION_LEVEL:
+    *((unsigned char *)arg)= mysql->options.extension->zstd_compression_level;
     break;
   case MYSQL_OPT_NAMED_PIPE:
     *((my_bool *)arg)= mysql->options.named_pipe;
