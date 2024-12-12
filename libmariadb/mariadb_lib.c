@@ -153,6 +153,16 @@ static int cli_report_progress(MYSQL *mysql, uchar *packet, uint length);
 extern int mysql_client_plugin_init();
 extern void mysql_client_plugin_deinit();
 
+/* Helper function to detect possible buffer over- or underflow */
+my_bool ma_check_buffer_boundaries(MYSQL *mysql, uchar *current_pos,
+                                  ulong packet_size, size_t required)
+{
+  if ( (packet_size < (ulong)(current_pos - mysql->net.read_pos)) ||
+       ((size_t)(packet_size - (current_pos - mysql->net.read_pos)) < required))
+    return 1;
+  return 0;
+}
+
 /* net_get_error */
 void net_get_error(char *buf, size_t buf_len,
        char *error, size_t error_len,
@@ -890,9 +900,12 @@ unpack_fields(const MYSQL *mysql,
 
     for (i=0; i < field_count; i++)
     {
-      uint length= (uint)(row->data[i+1] - row->data[i] - 1);
-      if (!row->data[i] || row->data[i][length])
+      uint length;
+
+      if (!row->data[i])
         goto error;
+
+     length= (uint)(row->data[i+1] - row->data[i] - 1);
 
       *(char **)(((char *)field) + rset_field_offsets[i*2])=
         ma_strdup_root(alloc, (char *)row->data[i]);
@@ -2164,16 +2177,6 @@ int STDCALL
 mysql_send_query(MYSQL* mysql, const char* query, unsigned long length)
 {
   return ma_simple_command(mysql, COM_QUERY, query, length, 1,0);
-}
-
-/* Helper function to detect possible buffer over- or underflow */
-inline my_bool ma_check_buffer_boundaries(MYSQL *mysql, uchar *current_pos,
-                                  ulong packet_size, size_t required)
-{
-  if ( (packet_size < (ulong)(current_pos - mysql->net.read_pos)) ||
-       ((size_t)(packet_size - (current_pos - mysql->net.read_pos)) < required))
-    return 1;
-  return 0;
 }
 
 int ma_read_ok_packet(MYSQL *mysql, uchar *pos, ulong length)
