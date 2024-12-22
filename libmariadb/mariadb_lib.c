@@ -879,6 +879,35 @@ static size_t rset_field_offsets[]= {
   OFFSET(MYSQL_FIELD, org_name_length)
 };
 
+/* calculate lengths for field metadata:
+   returns zero on success, 1 if null_length was
+   detected */
+static my_bool ma_get_rset_field_lengths(MYSQL_ROW row, unsigned int field_count,
+                               unsigned long *lengths)
+{
+  unsigned long *last_length= 0;
+  char *pos= 0;
+  MYSQL_ROW end= row + field_count + 1;
+  my_bool rc= 0;
+
+  while (row != end)
+  {
+    if (*row)
+    {
+      if (pos)
+        *last_length= (ulong)(*row - pos - 1);
+      pos= *row;
+    } else {
+      /* NULL_LENGTH (see also CONC-709) */
+      rc= 1;
+      *last_length= 0;
+    }
+    last_length= lengths++;
+    row++;
+  }
+  return rc;
+}
+
 MYSQL_FIELD *
 unpack_fields(const MYSQL *mysql,
               MYSQL_DATA *data, MA_MEM_ROOT *alloc, uint fields,
@@ -895,21 +924,19 @@ unpack_fields(const MYSQL *mysql,
 
   for (row=data->data; row ; row = row->next,field++)
   {
+    unsigned long lengths[9];
+
     if (field >= result + fields)
+      goto error;
+
+    if (ma_get_rset_field_lengths(row->data, field_count, lengths))
       goto error;
 
     for (i=0; i < field_count; i++)
     {
-      uint length;
-
-      if (!row->data[i])
-        goto error;
-
-     length= (uint)(row->data[i+1] - row->data[i] - 1);
-
       *(char **)(((char *)field) + rset_field_offsets[i*2])=
         ma_strdup_root(alloc, (char *)row->data[i]);
-      *(unsigned int *)(((char *)field) + rset_field_offsets[i*2+1])= length;
+      *(unsigned int *)(((char *)field) + rset_field_offsets[i*2+1])= lengths[i];
     }
 
     field->extension= NULL;

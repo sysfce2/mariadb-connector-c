@@ -59,6 +59,8 @@ enum mysql_enum_shutdown_level
   KILL_CONNECTION= 255
 };
 
+enum Item_result {STRING_RESULT,REAL_RESULT,INT_RESULT,ROW_RESULT,DECIMAL_RESULT};
+
 enum enum_server_command
 {
   COM_SLEEP = 0,
