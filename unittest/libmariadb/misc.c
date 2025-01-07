@@ -1544,7 +1544,10 @@ static int test_conc163(MYSQL *mysql)
 
   FAIL_IF(mysql_info(mysql) != NULL, "mysql_info: expected NULL");
 
-  rc= mysql_query(mysql, "CREATE OR REPLACE TABLE t1 AS SELECT 1");
+  rc= mysql_query(mysql, "DROP TABLE IF EXISTS t1");
+  check_mysql_rc(rc, mysql);
+
+  rc= mysql_query(mysql, "CREATE TABLE t1 AS SELECT 1");
   check_mysql_rc(rc, mysql);
 
   FAIL_IF(mysql_info(mysql) == NULL, "mysql_info: expected != NULL");
@@ -1557,7 +1560,9 @@ static int test_conc163(MYSQL *mysql)
   check_stmt_rc(rc, stmt);
   FAIL_IF(mysql_info(mysql) != NULL, "mysql_info: expected NULL");
 
-  rc= mariadb_stmt_execute_direct(stmt, SL("CREATE OR REPLACE TABLE t1 AS SELECT 1"));
+  rc= mysql_query(mysql, "DROP TABLE IF EXISTS t1");
+  check_mysql_rc(rc, mysql);
+  rc= mariadb_stmt_execute_direct(stmt, SL("CREATE TABLE t1 AS SELECT 1"));
   check_stmt_rc(rc, stmt);
   FAIL_IF(mysql_info(mysql) == NULL, "mysql_info: expected != NULL");
 
