@@ -52,6 +52,8 @@
 #define MYSQL_AUTODETECT_CHARSET_NAME "auto"
 #define BINCMP_FLAG       131072
 
+enum Item_result {STRING_RESULT,REAL_RESULT,INT_RESULT,ROW_RESULT,DECIMAL_RESULT};
+
 enum mysql_enum_shutdown_level
 {
   SHUTDOWN_DEFAULT = 0,
