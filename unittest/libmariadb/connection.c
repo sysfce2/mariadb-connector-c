@@ -2374,6 +2374,8 @@ static int test_conc589(MYSQL *my)
   my_bool reconnect= 1, verify= 0;
   unsigned long last_thread_id= 0;
 
+  SKIP_MAXSCALE;
+
   mysql_options(mysql, MYSQL_OPT_RECONNECT, &reconnect);
   mysql_options(mysql, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
 
