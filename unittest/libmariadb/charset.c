@@ -815,7 +815,6 @@ static int test_conc223(MYSQL *mysql)
     return SKIP;
   }
 
-
   /*
     Test if we're running against an MDEV-27266 server.
     It can be detected by the presense of the FULL_COLLATION_NAME

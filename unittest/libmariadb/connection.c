@@ -2366,7 +2366,54 @@ static int test_conc748(MYSQL *my __attribute__((unused)))
 }
 #endif
 
+static int test_conc589(MYSQL *my)
+{
+  MYSQL *mysql= mysql_init(NULL);
+  MYSQL_RES *result;
+  int rc;
+  my_bool reconnect= 1, verify= 0;
+  unsigned long last_thread_id= 0;
+
+  mysql_options(mysql, MYSQL_OPT_RECONNECT, &reconnect);
+  mysql_options(mysql, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
+
+  if (!my_test_connect(mysql, hostname, username,
+                       password, schema, port, socketname, CLIENT_REMEMBER_OPTIONS))
+  {
+    diag("error: %s", mysql_error(mysql));
+    return FAIL;
+  }
+
+  rc= mysql_query(mysql, "SET SESSION wait_timeout=5");
+  check_mysql_rc(rc, mysql);
+
+  last_thread_id= mysql_thread_id(mysql);
+  if ((rc= mysql_query(mysql, "SELECT 1")) || (result= mysql_store_result(mysql)) == NULL)
+    check_mysql_rc(rc, mysql);
+
+  mysql_free_result(result);
+  sleep(10);
+
+  if ((rc= mysql_query(mysql, "SELECT 2")) || (result= mysql_store_result(mysql)) == NULL)
+    check_mysql_rc(rc, mysql);
+  mysql_free_result(result);
+  FAIL_IF(mysql_thread_id(mysql) == last_thread_id, "Expected new connection id");
+  last_thread_id= mysql_thread_id(mysql);
+
+  mysql_kill(my, last_thread_id);
+
+  sleep(10);
+
+  if ((rc= mysql_query(mysql, "SELECT 3")) || (result= mysql_store_result(mysql)) == NULL)
+    check_mysql_rc(rc, mysql);
+  mysql_free_result(result);
+  FAIL_IF(mysql_thread_id(mysql) == last_thread_id, "Expected new connection id");
+  mysql_close(mysql);
+  return OK;
+}
+
 struct my_tests_st my_tests[] = {
+  {"test_conc589", test_conc589, TEST_CONNECTION_DEFAULT, 0, NULL, NULL},
 #if defined(HAVE_GNUTLS) || defined(HAVE_OPENSSL)
   {"test_conc748", test_conc748, TEST_CONNECTION_NONE, 0, NULL, NULL},
 #endif
