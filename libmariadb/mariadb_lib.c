@@ -382,6 +382,15 @@ mthd_my_send_cmd(MYSQL *mysql,enum enum_server_command command, const char *arg,
 {
   NET *net= &mysql->net;
   int result= -1;
+
+  /* CONC-589: If reconnect option was specified, we have to check if the connection
+               (socket) is still available */
+  if (command != COM_QUIT && mysql->options.reconnect && ma_pvio_is_alive(mysql->net.pvio))
+  {
+    mysql->net.pvio= NULL;
+    mysql->net.error= 1;
+  }
+
   if (mysql->net.pvio == 0)
   {
     /* Do reconnect if possible */
