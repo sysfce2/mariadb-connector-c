@@ -105,6 +105,7 @@ my_context_spawn(struct my_context *c, void (*f)(void *), void *d)
   c->user_func= f;
   c->user_data= d;
   c->active= 1;
+  u.a[1]= 0;   /* Otherwise can give uninitialized warnings on 32-bit. */
   u.p= c;
   makecontext(&c->spawned_context, (uc_func_t)my_context_spawn_internal, 2,
               u.a[0], u.a[1]);
