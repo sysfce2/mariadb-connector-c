@@ -204,7 +204,7 @@ my_context_spawn(struct my_context *c, void (*f)(void *), void *d)
     (
      "movq %%rsp, (%[save])\n\t"
      "movq %[stack], %%rsp\n\t"
-#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4) || __clang__) && !defined(__INTEL_COMPILER)
+#if defined(__GCC_HAVE_DWARF2_CFI_ASM) || (defined(__clang__) && __clang_major__ < 13)
      /*
        This emits a DWARF DW_CFA_undefined directive to make the return address
        undefined. This indicates that this is the top of the stack frame, and
@@ -440,7 +440,7 @@ my_context_spawn(struct my_context *c, void (*f)(void *), void *d)
     (
      "movl %%esp, (%[save])\n\t"
      "movl %[stack], %%esp\n\t"
-#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4) || __clang__) && !defined(__INTEL_COMPILER)
+#if defined(__GCC_HAVE_DWARF2_CFI_ASM) || (defined(__clang__) && __clang_major__ < 13)
      /*
        This emits a DWARF DW_CFA_undefined directive to make the return address
        undefined. This indicates that this is the top of the stack frame, and
@@ -675,7 +675,7 @@ my_context_spawn(struct my_context *c, void (*f)(void *), void *d)
     (
      "mov x10, sp\n\t"
      "mov sp, %[stack]\n\t"
-#if !defined(__INTEL_COMPILER)
+#if defined(__GCC_HAVE_DWARF2_CFI_ASM) || (defined(__clang__) && __clang_major__ < 13)
      /*
        This emits a DWARF DW_CFA_undefined directive to make the return address
        (UNW_AARCH64_X30) undefined. This indicates that this is the top of the
