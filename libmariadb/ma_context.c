@@ -105,6 +105,7 @@ my_context_spawn(struct my_context *c, void (*f)(void *), void *d)
   c->user_func= f;
   c->user_data= d;
   c->active= 1;
+  u.a[1]= 0;   /* Otherwise can give uninitialized warnings on 32-bit. */
   u.p= c;
   makecontext(&c->spawned_context, (uc_func_t)my_context_spawn_internal, 2,
               u.a[0], u.a[1]);
@@ -204,7 +205,7 @@ my_context_spawn(struct my_context *c, void (*f)(void *), void *d)
     (
      "movq %%rsp, (%[save])\n\t"
      "movq %[stack], %%rsp\n\t"
-#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4) || __clang__) && !defined(__INTEL_COMPILER)
+#if defined(__GCC_HAVE_DWARF2_CFI_ASM) || (defined(__clang__) && __clang_major__ < 13)
      /*
        This emits a DWARF DW_CFA_undefined directive to make the return address
        undefined. This indicates that this is the top of the stack frame, and
@@ -440,7 +441,7 @@ my_context_spawn(struct my_context *c, void (*f)(void *), void *d)
     (
      "movl %%esp, (%[save])\n\t"
      "movl %[stack], %%esp\n\t"
-#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4) || __clang__) && !defined(__INTEL_COMPILER)
+#if defined(__GCC_HAVE_DWARF2_CFI_ASM) || (defined(__clang__) && __clang_major__ < 13)
      /*
        This emits a DWARF DW_CFA_undefined directive to make the return address
        undefined. This indicates that this is the top of the stack frame, and
@@ -675,7 +676,7 @@ my_context_spawn(struct my_context *c, void (*f)(void *), void *d)
     (
      "mov x10, sp\n\t"
      "mov sp, %[stack]\n\t"
-#if !defined(__INTEL_COMPILER)
+#if defined(__GCC_HAVE_DWARF2_CFI_ASM) || (defined(__clang__) && __clang_major__ < 13)
      /*
        This emits a DWARF DW_CFA_undefined directive to make the return address
        (UNW_AARCH64_X30) undefined. This indicates that this is the top of the
