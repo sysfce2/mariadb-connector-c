@@ -5027,11 +5027,14 @@ static int test_conc_fraction(MYSQL *mysql)
 
     diag("second_part: %ld", tm.second_part);
 
-    expected= i > 6 ? 123456 : frac * (unsigned int)powl(10, (6 - i));
+    expected= frac * 100000;
+    while (expected >= 1000000)
+      expected /= 10;
 
     if (tm.second_part != expected)
     {
       diag("Error: tm.second_part=%ld expected=%ld", tm.second_part, expected);
+      mysql_stmt_close(stmt);
       return FAIL;
     }
   }
@@ -5618,6 +5621,7 @@ static int test_conc623(MYSQL *mysql)
   rc= mysql_stmt_attr_set(stmt, STMT_ATTR_CB_PARAM, conc623_param_callback);
   check_stmt_rc(rc, stmt);
 
+  memset(&bind, 0, sizeof(MYSQL_BIND));
   bind.buffer_type= MYSQL_TYPE_LONG;
   rc= mysql_stmt_bind_param(stmt, &bind);
   check_stmt_rc(rc, stmt);
