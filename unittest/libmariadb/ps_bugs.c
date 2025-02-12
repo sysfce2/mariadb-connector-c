@@ -5001,7 +5001,7 @@ static int test_conc_fraction(MYSQL *mysql)
 
   for (i=0; i < 10; i++, frac=frac*10+i)
   {
-    my_ulonglong expected= 0;
+    unsigned int expected= frac;
     sprintf(query, "SELECT '2018-11-05 22:25:59.%ld'", frac);
 
     diag("%d: %s", i, query);
@@ -5027,7 +5027,8 @@ static int test_conc_fraction(MYSQL *mysql)
 
     diag("second_part: %ld", tm.second_part);
 
-    expected= frac * 100000;
+    while (expected && expected < 100000)
+      expected *= 10;
     while (expected >= 1000000)
       expected /= 10;
 
