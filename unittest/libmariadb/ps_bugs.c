@@ -5034,7 +5034,7 @@ static int test_conc_fraction(MYSQL *mysql)
 
     if (tm.second_part != expected)
     {
-      diag("Error: tm.second_part=%ld expected=%lld", tm.second_part, expected);
+      diag("Error: tm.second_part=%ld expected=%d", tm.second_part, expected);
       mysql_stmt_close(stmt);
       return FAIL;
     }
